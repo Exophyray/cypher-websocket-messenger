@@ -1,0 +1,67 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cipher-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cipher
+      POSTGRES_USER: cipher
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-cipher_pwd}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cipher -d cipher"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cipher_net
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: cipher-server
+    restart: unless-stopped
+    environment:
+      PORT: 3001
+      PG_HOST: postgres
+      PG_PORT: 5432
+      PG_DATABASE: cipher
+      PG_USER: cipher
+      PG_PASSWORD: ${PG_PASSWORD:-cipher_pwd}
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-long-random-string}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@example.com}
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - cipher_net
+    expose:
+      - "3001"
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: cipher-client
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    depends_on:
+      - server
+    networks:
+      - cipher_net
+
+volumes:
+  postgres_data:
+  uploads_data:
+
+networks:
+  cipher_net:
+    driver: bridge

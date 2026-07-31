@@ -1,4 +1,4 @@
-# 🔐 Cipher Messenger
+# Cipher Messenger
 
 A real-time web messenger with end-to-end encryption. Messages are encrypted in the browser, and the server only stores encrypted data.
 
